@@ -1,0 +1,1763 @@
+<!doctype html>
+<html lang="id">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Simulator Jaring-Jaring Bangun Ruang Sempurna</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+      body {
+        margin: 0;
+        overflow: hidden;
+        font-family: "Inter", sans-serif;
+      }
+      #canvas-container {
+        width: 100%;
+        height: 100%;
+        touch-action: none;
+        cursor: grab;
+      }
+      #canvas-container:active {
+        cursor: grabbing;
+      }
+
+      /* ===== FIX SLIDER UTAMA: pakai track pseudo-element ===== */
+      input[type="range"].slider-utama {
+        -webkit-appearance: none;
+        appearance: none;
+        width: 100%;
+        height: 28px;
+        background: transparent;
+        outline: none;
+        cursor: pointer;
+        display: block;
+      }
+      input[type="range"].slider-utama::-webkit-slider-runnable-track {
+        width: 100%;
+        height: 12px;
+        background: #bfdbfe;
+        border-radius: 8px;
+        box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.1);
+      }
+      input[type="range"].slider-utama::-webkit-slider-thumb {
+        -webkit-appearance: none;
+        appearance: none;
+        width: 28px;
+        height: 28px;
+        margin-top: -8px;
+        border-radius: 50%;
+        background: #2563eb;
+        cursor: pointer;
+        border: 3px solid white;
+        box-shadow: 0 3px 6px rgba(0, 0, 0, 0.4);
+        transition: transform 0.1s;
+      }
+      input[type="range"].slider-utama::-webkit-slider-thumb:hover {
+        transform: scale(1.15);
+      }
+      input[type="range"].slider-utama::-moz-range-track {
+        width: 100%;
+        height: 12px;
+        background: #bfdbfe;
+        border-radius: 8px;
+        box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.1);
+      }
+      input[type="range"].slider-utama::-moz-range-thumb {
+        width: 28px;
+        height: 28px;
+        border-radius: 50%;
+        background: #2563eb;
+        cursor: pointer;
+        border: 3px solid white;
+        box-shadow: 0 3px 6px rgba(0, 0, 0, 0.4);
+      }
+
+      input[type="range"].slider-ukuran {
+        accent-color: #3b82f6;
+        cursor: pointer;
+      }
+
+      input[type="color"] {
+        padding: 0;
+        border: none;
+        background: transparent;
+        cursor: pointer;
+      }
+      input[type="color"]::-webkit-color-swatch-wrapper {
+        padding: 0;
+      }
+      input[type="color"]::-webkit-color-swatch {
+        border: 2px solid #e2e8f0;
+        border-radius: 8px;
+      }
+
+      .glass-panel {
+        background: rgba(255, 255, 255, 0.95);
+        backdrop-filter: blur(12px);
+        border: 1px solid rgba(255, 255, 255, 0.6);
+      }
+
+      #conclusionCard {
+        display: none !important;
+      }
+
+      .custom-scrollbar::-webkit-scrollbar {
+        width: 6px;
+      }
+      .custom-scrollbar::-webkit-scrollbar-thumb {
+        background: #cbd5e1;
+        border-radius: 4px;
+      }
+
+      .canvas-color-mode {
+        cursor: crosshair !important;
+      }
+      .canvas-number-mode {
+        cursor: crosshair !important;
+      }
+      .canvas-number-delete {
+        cursor: pointer !important;
+      }
+    </style>
+
+    <script type="importmap">
+      {
+        "imports": {
+          "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+          "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+        }
+      }
+    </script>
+  </head>
+  <body class="flex flex-col md:flex-row h-screen bg-slate-50 text-slate-800">
+    <div
+      class="w-full md:w-96 bg-white shadow-2xl z-10 flex flex-col p-5 overflow-y-auto custom-scrollbar border-r border-slate-200"
+    >
+    <h1
+        class="text-5xl font-extrabold text-blue-700 mb-1 leading-tight tracking-tight"
+      >
+        NetVerse
+      </h1>  
+    <h1
+        class="text-3xl font-extrabold text-blue-700 mb-1 leading-tight tracking-tight"
+      >
+        Eksplorasi<br />Bangun Ruang
+      </h1>
+      <p class="text-xs text-slate-500 mb-6">
+        Buktikan sendiri bagaimana jaring-jaring 2D terlipat presisi menjadi
+        bentuk 3D utuh!
+      </p>
+
+      <!-- KOTAK KENDALI UTAMA: SLIDER JARING-JARING (FIXED) -->
+      <div
+        class="mb-6 bg-blue-50 rounded-xl border-2 border-blue-300 shadow-sm relative"
+      >
+        <div class="absolute inset-0 overflow-hidden rounded-xl pointer-events-none">
+          <div class="absolute -right-4 -top-4 opacity-10 text-7xl select-none">
+            📦
+          </div>
+        </div>
+
+        <div class="p-4 relative z-10">
+          <div class="flex justify-between items-center mb-3">
+            <label
+              class="block text-sm font-black text-blue-900 uppercase tracking-wide"
+            >
+              🎚️ Buka / Tutup Jaring
+            </label>
+          </div>
+
+          <div class="flex gap-3 items-center mb-4 py-1">
+            <span
+              class="text-xs font-bold text-blue-700 bg-white px-2 py-1 rounded shadow-sm shrink-0"
+              >3D</span
+            >
+            <input
+              type="range"
+              id="unfoldRange"
+              min="0"
+              max="100"
+              value="0"
+              class="slider-utama"
+            />
+            <span
+              class="text-xs font-bold text-blue-700 bg-white px-2 py-1 rounded shadow-sm shrink-0"
+              >2D</span
+            >
+          </div>
+
+          <button
+            id="btnAnimate"
+            class="w-full py-2.5 px-4 bg-blue-600 hover:bg-blue-700 text-white font-bold text-sm rounded-lg transition-all shadow-md flex justify-center items-center gap-2 border border-blue-800/20 cursor-pointer"
+          >
+            <span id="animIcon" class="text-lg">▶</span>
+            <span id="animText">Putar Animasi Otomatis</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Pilihan Keluarga Bangun -->
+      <div class="mb-5 bg-slate-100 p-3 rounded-lg border border-slate-200">
+        <label
+          class="block text-xs font-bold mb-2 text-slate-700 uppercase tracking-wider"
+          >Bentuk Dasar:</label
+        >
+        <select
+          id="shapeType"
+          class="w-full p-2 text-sm border-2 border-blue-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white font-bold text-blue-700 shadow-sm cursor-pointer"
+        >
+          <optgroup label="Sisi Datar">
+            <option value="prisma">Keluarga Prisma</option>
+            <option value="limas">Keluarga Limas</option>
+          </optgroup>
+          <optgroup label="Sisi Lengkung">
+            <option value="tabung">Tabung (Silinder)</option>
+            <option value="kerucut">Kerucut</option>
+            <option value="bola">Bola</option>
+          </optgroup>
+        </select>
+      </div>
+
+      <!-- FITUR: WARNA per sisi -->
+      <div class="mb-5 bg-slate-100 p-3 rounded-lg border border-slate-200">
+        <label
+          class="block text-xs font-bold mb-2 text-slate-700 uppercase tracking-wider"
+          >🎨 Warna Sisi (Klik Sisi)</label
+        >
+        <div class="flex items-center gap-2">
+          <input
+            type="color"
+            id="currentColor"
+            value="#3b82f6"
+            class="w-12 h-10 rounded cursor-pointer border-2 border-slate-200 bg-white shrink-0"
+          />
+          <div class="flex-1 min-w-0">
+            <div
+              id="colorStatus"
+              class="text-[11px] font-semibold text-slate-600 truncate"
+            >
+              Belum ada sisi dipilih
+            </div>
+            <button
+              id="clearColorsBtn"
+              class="text-[10px] text-blue-600 hover:underline mt-1 cursor-pointer"
+            >
+              Reset semua warna
+            </button>
+          </div>
+        </div>
+        <p class="text-[10px] text-slate-400 mt-2">
+          Aktifkan mode <b>Warna</b> di kanvas, klik sisi, lalu ubah warna.
+        </p>
+      </div>
+
+      <!-- FITUR: NOMOR manual -->
+      <div class="mb-5 bg-slate-100 p-3 rounded-lg border border-slate-200">
+        <label
+          class="block text-xs font-bold mb-2 text-slate-700 uppercase tracking-wider"
+          >🔢 Nomor Manual (Klik Titik)</label
+        >
+        <p class="text-[11px] text-slate-600 mb-2 leading-relaxed">
+          Aktifkan mode <b>Nomor</b>, klik pada sisi bangun untuk menempelkan
+          angka/label di posisi itu.
+          <br />
+          <span class="text-red-500 font-bold">✕ Klik angka untuk menghapusnya.</span>
+        </p>
+        <button
+          id="clearNumbersBtn"
+          class="w-full text-xs py-1.5 rounded bg-slate-200 hover:bg-slate-300 font-semibold cursor-pointer transition-colors"
+        >
+          🗑️ Hapus Semua Nomor
+        </button>
+      </div>
+
+      <hr class="my-2 border-slate-200" />
+
+      <div class="space-y-4 py-2">
+        <div id="sidesContainer">
+          <div class="flex justify-between items-end mb-1">
+            <label class="block text-xs font-bold text-slate-700"
+              >Jumlah Sisi Alas (n):</label
+            >
+            <span
+              id="sidesValue"
+              class="font-bold text-sm text-blue-600 bg-blue-100 px-2 py-0.5 rounded"
+              >4</span
+            >
+          </div>
+          <input
+            type="range"
+            id="baseSides"
+            min="3"
+            max="8"
+            value="4"
+            class="w-full slider-ukuran"
+          />
+          <p class="text-[10px] text-slate-400 font-medium mt-1">
+            Gunakan angka 4 untuk membuktikan Balok & Kubus.
+          </p>
+        </div>
+
+        <div>
+          <div class="flex justify-between items-end mb-1">
+            <label
+              id="labelPanjang"
+              class="block text-xs font-bold text-slate-700"
+              >Panjang Alas:</label
+            >
+            <span id="panjangValue" class="font-bold text-sm text-blue-600"
+              >5</span
+            >
+          </div>
+          <input
+            type="range"
+            id="panjang"
+            min="2"
+            max="8"
+            value="5"
+            class="w-full slider-ukuran"
+          />
+        </div>
+
+        <div id="lebarContainer" class="transition-all duration-300">
+          <div class="flex justify-between items-end mb-1">
+            <label class="block text-xs font-bold text-slate-700"
+              >Lebar Alas:</label
+            >
+            <span id="lebarValue" class="font-bold text-sm text-blue-600"
+              >4</span
+            >
+          </div>
+          <input
+            type="range"
+            id="lebar"
+            min="2"
+            max="8"
+            value="4"
+            class="w-full slider-ukuran"
+          />
+        </div>
+
+        <div id="tinggiContainer">
+          <div class="flex justify-between items-end mb-1">
+            <label class="block text-xs font-bold text-slate-700"
+              >Tinggi Bangun:</label
+            >
+            <span id="tinggiValue" class="font-bold text-sm text-blue-600"
+              >6</span
+            >
+          </div>
+          <input
+            type="range"
+            id="tinggi"
+            min="2"
+            max="8"
+            value="6"
+            class="w-full slider-ukuran"
+          />
+        </div>
+      </div>
+    </div>
+
+    <div id="viewport" class="w-full md:flex-1 relative bg-slate-200">
+      <!-- Wadah 3D -->
+      <div id="canvas-container" class="absolute inset-0"></div>
+
+      <!-- Mode Selector (tengah atas) -->
+      <div class="absolute top-5 left-1/2 -translate-x-1/2 z-20">
+        <div
+          class="bg-white/95 backdrop-blur-md rounded-full shadow-lg border border-slate-200 p-1 flex gap-1"
+        >
+          <button
+            data-mode="view"
+            class="mode-btn px-4 py-1.5 rounded-full text-xs font-bold transition-all bg-blue-600 text-white cursor-pointer"
+          >
+            👁️ Lihat
+          </button>
+          <button
+            data-mode="color"
+            class="mode-btn px-4 py-1.5 rounded-full text-xs font-bold transition-all text-slate-600 hover:bg-slate-100 cursor-pointer"
+          >
+            🎨 Warna
+          </button>
+          <button
+            data-mode="number"
+            class="mode-btn px-4 py-1.5 rounded-full text-xs font-bold transition-all text-slate-600 hover:bg-slate-100 cursor-pointer"
+          >
+            🔢 Nomor
+          </button>
+        </div>
+      </div>
+
+      <!-- Indikator Status Buka-Tutup -->
+      <div class="absolute top-5 right-5 pointer-events-none">
+        <div
+          id="statusBadge"
+          class="bg-blue-600 text-white px-5 py-2.5 rounded-full shadow-lg text-sm font-black border-2 border-white/20 tracking-wide transition-colors duration-300"
+        >
+          Mode: 3D Utuh
+        </div>
+      </div>
+
+      <div class="absolute top-5 left-5 pointer-events-none">
+        <div
+          class="bg-white/80 backdrop-blur px-3 py-1.5 rounded-full shadow text-xs font-semibold text-slate-700 flex items-center gap-2"
+        >
+          <span>🔄</span> Geser layar untuk memutar 3D
+        </div>
+      </div>
+
+      <!-- Kartu Kesimpulan Pedagogy (default hidden) -->
+      <div
+        class="absolute bottom-6 left-4 right-4 md:left-auto md:right-8 md:w-[450px] glass-panel p-6 rounded-2xl shadow-2xl pointer-events-none transition-all duration-300 transform scale-100"
+        id="conclusionCard"
+      >
+        <div class="flex items-start gap-4 mb-3">
+          <div
+            id="iconShape"
+            class="w-14 h-14 rounded-2xl bg-blue-100 flex items-center justify-center text-blue-600 font-black text-2xl shadow-inner shrink-0 transition-colors duration-300"
+          >
+            P
+          </div>
+          <div>
+            <div class="flex items-center gap-2 flex-wrap">
+              <h2
+                id="conclusionTitle"
+                class="text-xl font-black text-slate-800 tracking-tight leading-none"
+              >
+                Prisma Segi Empat
+              </h2>
+              <span
+                id="specialBadge"
+                class="hidden bg-gradient-to-r from-yellow-400 to-orange-500 text-white text-[10px] font-black px-2.5 py-1 rounded-full uppercase tracking-wider shadow-sm animate-bounce"
+              >
+                ✨ Istimewa
+              </span>
+            </div>
+            <p id="conclusionSub" class="text-sm font-bold text-blue-600 mt-1">
+              Bangun ruang bersisi datar.
+            </p>
+          </div>
+        </div>
+        <div
+          id="conclusionDesc"
+          class="text-sm text-slate-700 border-t border-slate-200/80 pt-3 leading-relaxed"
+        ></div>
+      </div>
+
+      <!-- Popup input nomor manual -->
+      <div
+        id="numPopup"
+        class="hidden absolute z-30 bg-white rounded-xl shadow-2xl border-2 border-blue-400 p-3"
+        style="min-width: 180px"
+      >
+        <label class="text-[11px] font-bold text-slate-700 block mb-1">
+          Masukkan angka / label:
+        </label>
+        <input
+          type="text"
+          id="numInput"
+          class="w-full border-2 border-blue-300 rounded px-2 py-1 text-sm focus:outline-none focus:border-blue-500 font-bold"
+          maxlength="4"
+          placeholder="Mis. A / 1"
+        />
+        <div class="flex gap-1 mt-2 justify-end">
+          <button
+            id="numCancel"
+            class="text-xs px-2.5 py-1 rounded bg-slate-200 hover:bg-slate-300 cursor-pointer font-semibold"
+          >
+            Batal
+          </button>
+          <button
+            id="numOk"
+            class="text-xs px-2.5 py-1 rounded bg-blue-600 hover:bg-blue-700 text-white font-bold cursor-pointer"
+          >
+            Tambah
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <script type="module">
+      import * as THREE from "three";
+      import { OrbitControls } from "three/addons/controls/OrbitControls.js";
+
+      let scene, camera, renderer, controls;
+      let netGroup = null;
+      let animInterval = null;
+      let isAnimating = false;
+      let raycaster, pointer;
+      let resizeObserver = null;
+
+      let currentMode = "view";
+      let selectedFaceMesh = null;
+      let selectedFaceId = null;
+      const faceColors = new Map();
+      let placedNumbers = [];
+      let pendingNumber = null;
+      let lastShapeType = null;
+
+      window.activeHinges = [];
+      window.activeMorphs = [];
+      window.topHingeCylinder = null;
+
+      const numberTextureCache = new Map();
+
+      const ui = {
+        type: document.getElementById("shapeType"),
+        sides: document.getElementById("baseSides"),
+        panjang: document.getElementById("panjang"),
+        lebar: document.getElementById("lebar"),
+        tinggi: document.getElementById("tinggi"),
+        unfold: document.getElementById("unfoldRange"),
+        lblSides: document.getElementById("sidesValue"),
+        lblPanjang: document.getElementById("panjangValue"),
+        lblLebar: document.getElementById("lebarValue"),
+        lblTinggi: document.getElementById("tinggiValue"),
+        titlePanjang: document.getElementById("labelPanjang"),
+        containerLebar: document.getElementById("lebarContainer"),
+        containerSides: document.getElementById("sidesContainer"),
+        containerTinggi: document.getElementById("tinggiContainer"),
+        statusBadge: document.getElementById("statusBadge"),
+        btnAnimate: document.getElementById("btnAnimate"),
+        animIcon: document.getElementById("animIcon"),
+        animText: document.getElementById("animText"),
+        card: document.getElementById("conclusionCard"),
+        title: document.getElementById("conclusionTitle"),
+        sub: document.getElementById("conclusionSub"),
+        desc: document.getElementById("conclusionDesc"),
+        icon: document.getElementById("iconShape"),
+        badge: document.getElementById("specialBadge"),
+        currentColor: document.getElementById("currentColor"),
+        colorStatus: document.getElementById("colorStatus"),
+        clearColorsBtn: document.getElementById("clearColorsBtn"),
+        clearNumbersBtn: document.getElementById("clearNumbersBtn"),
+        numPopup: document.getElementById("numPopup"),
+        numInput: document.getElementById("numInput"),
+        numOk: document.getElementById("numOk"),
+        numCancel: document.getElementById("numCancel"),
+        viewport: document.getElementById("viewport"),
+        canvasContainer: document.getElementById("canvas-container"),
+      };
+
+      // ======================= INIT =======================
+      function init() {
+        const container = ui.canvasContainer;
+
+        scene = new THREE.Scene();
+        scene.background = new THREE.Color("#e2e8f0");
+
+        const initW = container.clientWidth || window.innerWidth - 384 || 800;
+        const initH = container.clientHeight || window.innerHeight || 600;
+
+        camera = new THREE.PerspectiveCamera(45, initW / initH, 0.1, 1000);
+        camera.position.set(15, 12, 18);
+
+        renderer = new THREE.WebGLRenderer({ antialias: true });
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+        renderer.setSize(initW, initH);
+        renderer.shadowMap.enabled = true;
+        renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+        container.appendChild(renderer.domElement);
+
+        resizeObserver = new ResizeObserver(() => {
+          const w = container.clientWidth;
+          const h = container.clientHeight;
+          if (w > 0 && h > 0) {
+            camera.aspect = w / h;
+            camera.updateProjectionMatrix();
+            renderer.setSize(w, h);
+          }
+        });
+        resizeObserver.observe(container);
+
+        raycaster = new THREE.Raycaster();
+        pointer = new THREE.Vector2();
+
+        const ambientLight = new THREE.AmbientLight(0xffffff, 0.7);
+        scene.add(ambientLight);
+
+        const dirLight = new THREE.DirectionalLight(0xffffff, 0.85);
+        dirLight.position.set(12, 20, 15);
+        dirLight.castShadow = true;
+        dirLight.shadow.mapSize.width = 1024;
+        dirLight.shadow.mapSize.height = 1024;
+        scene.add(dirLight);
+
+        const gridHelper = new THREE.GridHelper(24, 24, "#94a3b8", "#cbd5e1");
+        gridHelper.position.y = -0.01;
+        scene.add(gridHelper);
+
+        controls = new OrbitControls(camera, renderer.domElement);
+        controls.enableDamping = true;
+        controls.dampingFactor = 0.05;
+        controls.maxPolarAngle = Math.PI / 2 + 0.1;
+        controls.minDistance = 5;
+        controls.maxDistance = 40;
+
+        window.addEventListener("resize", onWindowResize);
+
+        [ui.type, ui.sides, ui.panjang, ui.lebar, ui.tinggi].forEach((input) => {
+          input.addEventListener("input", () => {
+            updateUIState();
+            generateGeometry();
+            updatePedagogyCard();
+          });
+        });
+
+        ui.unfold.addEventListener("input", () => {
+          if (isAnimating) stopAnimation();
+          applyFoldRotation();
+        });
+
+        ui.btnAnimate.addEventListener("click", toggleAnimation);
+
+        ui.currentColor.addEventListener("input", () => {
+          if (!selectedFaceMesh) return;
+          const hex = ui.currentColor.value;
+          selectedFaceMesh.material.color.set(hex);
+          if (selectedFaceId) faceColors.set(selectedFaceId, hex);
+        });
+
+        ui.clearColorsBtn.addEventListener("click", () => {
+          faceColors.clear();
+          generateGeometry();
+          deselectFace();
+        });
+
+        ui.clearNumbersBtn.addEventListener("click", () => {
+          placedNumbers = [];
+          if (netGroup) {
+            netGroup.traverse((obj) => {
+              if (obj.userData.attachedNumbers) {
+                obj.userData.attachedNumbers.forEach((item) => {
+                  if (item.sprite.parent) item.sprite.parent.remove(item.sprite);
+                });
+                obj.userData.attachedNumbers = [];
+              }
+              const toRemove = [];
+              obj.children.forEach((c) => {
+                if (c.isSprite) toRemove.push(c);
+              });
+              toRemove.forEach((c) => obj.remove(c));
+            });
+          }
+        });
+
+        document.querySelectorAll(".mode-btn").forEach((btn) => {
+          btn.addEventListener("click", () => setMode(btn.dataset.mode));
+        });
+
+        ui.numOk.addEventListener("click", submitNumberPopup);
+        ui.numCancel.addEventListener("click", hideNumberPopup);
+        ui.numInput.addEventListener("keydown", (e) => {
+          if (e.key === "Enter") submitNumberPopup();
+          if (e.key === "Escape") hideNumberPopup();
+        });
+
+        let downPos = null;
+        renderer.domElement.addEventListener("pointerdown", (e) => {
+          downPos = { x: e.clientX, y: e.clientY };
+        });
+        renderer.domElement.addEventListener("pointerup", (e) => {
+          if (!downPos) return;
+          const dx = e.clientX - downPos.x;
+          const dy = e.clientY - downPos.y;
+          downPos = null;
+          if (Math.hypot(dx, dy) > 5) return;
+          handleFaceClick(e);
+        });
+
+        renderer.domElement.addEventListener("pointermove", (e) => {
+          if (currentMode !== "number") return;
+          const rect = renderer.domElement.getBoundingClientRect();
+          pointer.x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
+          pointer.y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
+          raycaster.setFromCamera(pointer, camera);
+          const hits = raycaster.intersectObjects(netGroup ? netGroup.children : [], true);
+          const first = hits[0];
+          const isOverNumber =
+            first &&
+            first.object.isSprite &&
+            first.object.userData.isNumberSprite === true;
+          const c = ui.canvasContainer;
+          if (isOverNumber) {
+            c.classList.add("canvas-number-delete");
+          } else {
+            c.classList.remove("canvas-number-delete");
+          }
+        });
+
+        updateUIState();
+        generateGeometry();
+        updatePedagogyCard();
+        animate();
+      }
+
+      function updateUIState() {
+        const type = ui.type.value;
+        const isLengkung = ["tabung", "kerucut", "bola"].includes(type);
+
+        if (isLengkung) {
+          ui.containerSides.style.display = "none";
+          ui.containerLebar.style.display = "none";
+          if (type === "bola") {
+            ui.containerTinggi.style.display = "none";
+            ui.titlePanjang.innerText = "Diameter Bola:";
+          } else {
+            ui.containerTinggi.style.display = "block";
+            ui.titlePanjang.innerText = "Diameter Alas:";
+          }
+        } else {
+          ui.containerSides.style.display = "block";
+          ui.containerTinggi.style.display = "block";
+          if (parseInt(ui.sides.value) === 4) {
+            ui.containerLebar.style.display = "block";
+            ui.titlePanjang.innerText = "Panjang Alas:";
+          } else {
+            ui.containerLebar.style.display = "none";
+            ui.titlePanjang.innerText = "Ukuran Sisi Alas:";
+          }
+        }
+      }
+
+      function setMode(mode) {
+        currentMode = mode;
+        document.querySelectorAll(".mode-btn").forEach((btn) => {
+          const isActive = btn.dataset.mode === mode;
+          btn.className = `mode-btn px-4 py-1.5 rounded-full text-xs font-bold transition-all cursor-pointer ${
+            isActive
+              ? "bg-blue-600 text-white"
+              : "text-slate-600 hover:bg-slate-100"
+          }`;
+        });
+        if (mode !== "color") deselectFace();
+        hideNumberPopup();
+
+        const c = ui.canvasContainer;
+        c.classList.remove(
+          "canvas-color-mode",
+          "canvas-number-mode",
+          "canvas-number-delete",
+        );
+        if (mode === "color") c.classList.add("canvas-color-mode");
+        else if (mode === "number") c.classList.add("canvas-number-mode");
+        else c.style.cursor = "grab";
+      }
+
+      function selectFace(mesh, faceId) {
+        if (selectedFaceMesh && selectedFaceMesh !== mesh) {
+          try {
+            selectedFaceMesh.material.emissive.setHex(0x000000);
+          } catch (e) {}
+        }
+        selectedFaceMesh = mesh;
+        selectedFaceId = faceId;
+        try {
+          mesh.material.emissive.setHex(0x333333);
+        } catch (e) {}
+        ui.currentColor.value = "#" + mesh.material.color.getHexString();
+        ui.colorStatus.innerText = `Terpilih: ${faceId}`;
+        ui.colorStatus.classList.remove("text-slate-600");
+        ui.colorStatus.classList.add("text-blue-700");
+      }
+
+      function deselectFace() {
+        if (selectedFaceMesh) {
+          try {
+            selectedFaceMesh.material.emissive.setHex(0x000000);
+          } catch (e) {}
+        }
+        selectedFaceMesh = null;
+        selectedFaceId = null;
+        ui.colorStatus.innerText = "Belum ada sisi dipilih";
+        ui.colorStatus.classList.remove("text-blue-700");
+        ui.colorStatus.classList.add("text-slate-600");
+      }
+
+      function handleFaceClick(e) {
+        if (!netGroup) return;
+        if (currentMode === "view") return;
+
+        const rect = renderer.domElement.getBoundingClientRect();
+        pointer.x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
+        pointer.y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
+        raycaster.setFromCamera(pointer, camera);
+
+        const intersects = raycaster.intersectObjects(netGroup.children, true);
+
+        if (currentMode === "number") {
+          const first = intersects[0];
+          if (
+            first &&
+            first.object.isSprite &&
+            first.object.userData.isNumberSprite === true
+          ) {
+            deleteNumberSprite(first.object);
+            return;
+          }
+        }
+
+        let faceHit = null;
+        for (const hit of intersects) {
+          let obj = hit.object;
+          while (obj && !obj.userData.faceId) obj = obj.parent;
+          if (obj && obj.isMesh) {
+            faceHit = { hit, mesh: obj };
+            break;
+          }
+        }
+
+        if (!faceHit) {
+          if (currentMode === "color") deselectFace();
+          hideNumberPopup();
+          return;
+        }
+
+        if (currentMode === "color") {
+          selectFace(faceHit.mesh, faceHit.mesh.userData.faceId);
+        } else if (currentMode === "number") {
+          const mesh = faceHit.mesh;
+          if (mesh.userData.isMorph) {
+            if (!faceHit.hit.uv) return;
+            const cols = mesh.userData.cols;
+            const rows = mesh.userData.rows;
+            const i = Math.round(faceHit.hit.uv.x * cols);
+            const j = Math.round(faceHit.hit.uv.y * rows);
+            const gridIdx = i * (rows + 1) + j;
+            showNumberPopup(e.clientX, e.clientY, mesh, {
+              type: "morph",
+              gridIdx,
+              normal: faceHit.hit.face
+                ? faceHit.hit.face.normal.clone()
+                : new THREE.Vector3(0, 1, 0),
+            });
+          } else {
+            const worldNormal = faceHit.hit.face
+              ? faceHit.hit.face.normal
+                  .clone()
+                  .transformDirection(mesh.matrixWorld)
+              : new THREE.Vector3(0, 1, 0);
+            const offsetWorld = faceHit.hit.point
+              .clone()
+              .add(worldNormal.multiplyScalar(0.12));
+            const localPos = mesh.worldToLocal(offsetWorld);
+            showNumberPopup(e.clientX, e.clientY, mesh, {
+              type: "flat",
+              localPos,
+            });
+          }
+        }
+      }
+
+      function showNumberPopup(clientX, clientY, mesh, anchor) {
+        pendingNumber = { mesh, anchor };
+        const rect = ui.viewport.getBoundingClientRect();
+        let x = clientX - rect.left + 10;
+        let y = clientY - rect.top + 10;
+
+        ui.numPopup.classList.remove("hidden");
+        const popupRect = ui.numPopup.getBoundingClientRect();
+        if (x + popupRect.width > rect.width) x = rect.width - popupRect.width - 8;
+        if (y + popupRect.height > rect.height)
+          y = rect.height - popupRect.height - 8;
+
+        ui.numPopup.style.left = x + "px";
+        ui.numPopup.style.top = y + "px";
+        ui.numInput.value = "";
+        ui.numInput.focus();
+      }
+
+      function hideNumberPopup() {
+        ui.numPopup.classList.add("hidden");
+        pendingNumber = null;
+      }
+
+      function submitNumberPopup() {
+        if (!pendingNumber) {
+          hideNumberPopup();
+          return;
+        }
+        const text = ui.numInput.value.trim();
+        if (!text) {
+          hideNumberPopup();
+          return;
+        }
+        placeNumber(pendingNumber.mesh, pendingNumber.anchor, text);
+        hideNumberPopup();
+      }
+
+      // ======================= NUMBER SPRITES =======================
+      // ===== FIX: depthTest=false + renderOrder tinggi agar selalu terlihat
+      //            dalam mode 2D maupun 3D, tidak terpotong objek lain. =====
+      function createNumberSprite(text, size) {
+        let tex = numberTextureCache.get(text);
+        if (!tex) {
+          const canvas = document.createElement("canvas");
+          canvas.width = 128;
+          canvas.height = 128;
+          const ctx = canvas.getContext("2d");
+          ctx.clearRect(0, 0, 128, 128);
+
+          ctx.fillStyle = "rgba(255, 255, 255, 0.95)";
+          ctx.beginPath();
+          ctx.arc(64, 64, 54, 0, 2 * Math.PI);
+          ctx.fill();
+          ctx.strokeStyle = "#0f172a";
+          ctx.lineWidth = 5;
+          ctx.stroke();
+
+          ctx.fillStyle = "#0f172a";
+          const fontSize = text.length > 2 ? 44 : text.length > 1 ? 60 : 76;
+          ctx.font = `bold ${fontSize}px Arial, sans-serif`;
+          ctx.textAlign = "center";
+          ctx.textBaseline = "middle";
+          ctx.fillText(text, 64, 64);
+
+          tex = new THREE.CanvasTexture(canvas);
+          tex.minFilter = THREE.LinearFilter;
+          tex.magFilter = THREE.LinearFilter;
+          numberTextureCache.set(text, tex);
+        }
+
+        const mat = new THREE.SpriteMaterial({
+          map: tex,
+          transparent: true,
+          // >>> PERUBAHAN KUNCI: sprite tidak lagi diuji terhadap depth buffer
+          depthTest: false,
+          depthWrite: false,
+        });
+        const sprite = new THREE.Sprite(mat);
+        sprite.scale.set(size, size, 1);
+        sprite.userData.isNumberSprite = true;
+        // >>> PERUBAHAN KUNCI: render paling akhir sehingga tidak tertutup
+        sprite.renderOrder = 999;
+        return sprite;
+      }
+
+      function getSpriteSize() {
+        const p = parseFloat(ui.panjang.value);
+        const t = parseFloat(ui.tinggi.value);
+        return Math.max(0.8, Math.min(1.5, Math.min(p, t) * 0.22));
+      }
+
+      function placeNumber(mesh, anchor, text) {
+        const faceId = mesh.userData.faceId;
+        if (!faceId) return;
+
+        const sprite = createNumberSprite(text, getSpriteSize());
+
+        if (anchor.type === "flat") {
+          const lp = anchor.localPos;
+          sprite.position.set(lp.x, lp.y, lp.z);
+          mesh.add(sprite);
+          placedNumbers.push({
+            faceId,
+            type: "flat",
+            localPos: { x: lp.x, y: lp.y, z: lp.z },
+            text,
+            sprite,
+          });
+        } else {
+          const idx = anchor.gridIdx;
+          const posArr = mesh.geometry.attributes.position.array;
+          const normArr = mesh.geometry.attributes.normal.array;
+          const off = 0.12;
+          sprite.position.set(
+            posArr[idx * 3] + (normArr[idx * 3] || 0) * off,
+            posArr[idx * 3 + 1] + (normArr[idx * 3 + 1] || 0) * off,
+            posArr[idx * 3 + 2] + (normArr[idx * 3 + 2] || 0) * off,
+          );
+          mesh.add(sprite);
+          if (!mesh.userData.attachedNumbers) mesh.userData.attachedNumbers = [];
+          mesh.userData.attachedNumbers.push({ sprite, gridIdx: idx });
+          placedNumbers.push({
+            faceId,
+            type: "morph",
+            gridIdx: idx,
+            text,
+            sprite,
+          });
+        }
+      }
+
+      function deleteNumberSprite(sprite) {
+        placedNumbers = placedNumbers.filter((entry) => entry.sprite !== sprite);
+
+        const parent = sprite.parent;
+        if (parent && parent.userData.attachedNumbers) {
+          parent.userData.attachedNumbers = parent.userData.attachedNumbers.filter(
+            (item) => item.sprite !== sprite,
+          );
+        }
+
+        if (parent) parent.remove(sprite);
+
+        if (sprite.material) {
+          sprite.material.dispose();
+        }
+      }
+
+      function findMeshByFaceId(faceId) {
+        if (!netGroup) return null;
+        let found = null;
+        netGroup.traverse((obj) => {
+          if (obj.userData.faceId === faceId && obj.isMesh) found = obj;
+        });
+        return found;
+      }
+
+      function restoreNumbers() {
+        placedNumbers.forEach((entry) => {
+          const mesh = findMeshByFaceId(entry.faceId);
+          if (!mesh) return;
+          const sprite = createNumberSprite(entry.text, getSpriteSize());
+          entry.sprite = sprite;
+
+          if (entry.type === "flat") {
+            const lp = entry.localPos;
+            sprite.position.set(lp.x, lp.y, lp.z);
+            mesh.add(sprite);
+          } else {
+            const idx = entry.gridIdx;
+            const posArr = mesh.geometry.attributes.position.array;
+            const normArr = mesh.geometry.attributes.normal.array;
+            const off = 0.12;
+            sprite.position.set(
+              posArr[idx * 3] + (normArr[idx * 3] || 0) * off,
+              posArr[idx * 3 + 1] + (normArr[idx * 3 + 1] || 0) * off,
+              posArr[idx * 3 + 2] + (normArr[idx * 3 + 2] || 0) * off,
+            );
+            mesh.add(sprite);
+            if (!mesh.userData.attachedNumbers)
+              mesh.userData.attachedNumbers = [];
+            mesh.userData.attachedNumbers.push({ sprite, gridIdx: idx });
+          }
+        });
+      }
+
+      // ======================= GEOMETRY =======================
+      function makeMaterial(colorHex, opts = {}) {
+        return new THREE.MeshStandardMaterial({
+          color: new THREE.Color(colorHex),
+          side: THREE.DoubleSide,
+          roughness: 0.35,
+          metalness: 0.08,
+          ...opts,
+        });
+      }
+
+      function createMorphGeometry(cols, rows, pos3D, pos2D, material) {
+        const geom = new THREE.BufferGeometry();
+        const vertexCount = (cols + 1) * (rows + 1);
+        const positions = new Float32Array(vertexCount * 3);
+        const uvs = new Float32Array(vertexCount * 2);
+        const indices = [];
+
+        for (let i = 0; i < cols; i++) {
+          for (let j = 0; j < rows; j++) {
+            const a = i * (rows + 1) + j;
+            const b = i * (rows + 1) + j + 1;
+            const c = (i + 1) * (rows + 1) + j;
+            const d = (i + 1) * (rows + 1) + j + 1;
+            indices.push(a, b, d);
+            indices.push(a, d, c);
+          }
+        }
+
+        for (let i = 0; i <= cols; i++) {
+          for (let j = 0; j <= rows; j++) {
+            const idx = i * (rows + 1) + j;
+            uvs[idx * 2] = i / cols;
+            uvs[idx * 2 + 1] = j / rows;
+          }
+        }
+
+        geom.setIndex(indices);
+        geom.setAttribute("position", new THREE.BufferAttribute(positions, 3));
+        geom.setAttribute("uv", new THREE.BufferAttribute(uvs, 2));
+
+        const mesh = new THREE.Mesh(geom, material);
+        mesh.userData.isMorph = true;
+        mesh.userData.cols = cols;
+        mesh.userData.rows = rows;
+
+        return {
+          mesh,
+          pos3D,
+          pos2D,
+          update: function (p) {
+            const arr = this.mesh.geometry.attributes.position.array;
+            for (let i = 0; i < pos3D.length; i++) {
+              arr[i] = THREE.MathUtils.lerp(this.pos3D[i], this.pos2D[i], p);
+            }
+            this.mesh.geometry.attributes.position.needsUpdate = true;
+            this.mesh.geometry.computeVertexNormals();
+          },
+        };
+      }
+
+      function generateGeometry() {
+        if (netGroup) {
+          netGroup.traverse((obj) => {
+            if (obj.geometry) obj.geometry.dispose();
+            if (obj.material) {
+              if (Array.isArray(obj.material))
+                obj.material.forEach((m) => m.dispose());
+              else obj.material.dispose();
+            }
+          });
+          scene.remove(netGroup);
+        }
+        netGroup = new THREE.Group();
+        window.activeHinges = [];
+        window.activeMorphs = [];
+        window.topHingeCylinder = null;
+        deselectFace();
+
+        const type = ui.type.value;
+        const n = parseInt(ui.sides.value);
+        const p = parseFloat(ui.panjang.value);
+        const l = n === 4 ? parseFloat(ui.lebar.value) : p;
+        const t = parseFloat(ui.tinggi.value);
+
+        if (lastShapeType !== null && lastShapeType !== type) {
+          faceColors.clear();
+          placedNumbers = [];
+        }
+        lastShapeType = type;
+
+        const isLengkung = ["tabung", "kerucut", "bola"].includes(type);
+        const isPrisma = type === "prisma";
+
+        const defaultBaseColor = 0x2563eb;
+        const defaultSideColor = 0x3b82f6;
+        const edgeMat = new THREE.LineBasicMaterial({ color: 0x0f172a });
+
+        const getBaseColor = (faceId) =>
+          faceColors.get(faceId) ||
+          "#" + defaultBaseColor.toString(16).padStart(6, "0");
+        const getSideColor = (faceId) =>
+          faceColors.get(faceId) ||
+          "#" + defaultSideColor.toString(16).padStart(6, "0");
+
+        const registerFace = (mesh, faceId) => {
+          mesh.userData.faceId = faceId;
+        };
+
+        if (isLengkung) {
+          const r = p / 2;
+
+          if (type === "tabung") {
+            const baseId = "tabung-base";
+            const baseMat = makeMaterial(getBaseColor(baseId), {
+              transparent: false,
+            });
+            const baseGeom = new THREE.CircleGeometry(r, 64);
+            baseGeom.rotateX(-Math.PI / 2);
+            const baseMesh = new THREE.Mesh(baseGeom, baseMat);
+            baseMesh.add(
+              new THREE.LineSegments(new THREE.EdgesGeometry(baseGeom), edgeMat),
+            );
+            registerFace(baseMesh, baseId);
+            netGroup.add(baseMesh);
+
+            const selimutId = "tabung-selimut";
+            const selimutMat = makeMaterial(getSideColor(selimutId), {
+              transparent: true,
+              opacity: 0.85,
+            });
+            const cols = 64,
+              rows = 8;
+            const pos3D = [],
+              pos2D = [];
+            for (let i = 0; i <= cols; i++) {
+              const ur = i / cols;
+              const phi = (ur - 0.5) * 2 * Math.PI;
+              for (let j = 0; j <= rows; j++) {
+                const vr = j / rows;
+                pos3D.push(r * Math.sin(phi), vr * t, -r * Math.cos(phi));
+                pos2D.push(phi * r, 0, -r - vr * t);
+              }
+            }
+            const selimutMorph = createMorphGeometry(
+              cols,
+              rows,
+              pos3D,
+              pos2D,
+              selimutMat,
+            );
+            registerFace(selimutMorph.mesh, selimutId);
+            netGroup.add(selimutMorph.mesh);
+            window.activeMorphs.push(selimutMorph);
+
+            const topId = "tabung-top";
+            const topMat = makeMaterial(getBaseColor(topId), {
+              transparent: false,
+            });
+            const topHinge = new THREE.Group();
+            const topGeom = new THREE.CircleGeometry(r, 64);
+            topGeom.rotateX(-Math.PI / 2);
+            const topMesh = new THREE.Mesh(topGeom, topMat);
+            topMesh.add(
+              new THREE.LineSegments(new THREE.EdgesGeometry(topGeom), edgeMat),
+            );
+            topMesh.position.set(0, 0, r);
+            registerFace(topMesh, topId);
+            topHinge.add(topMesh);
+            netGroup.add(topHinge);
+            window.topHingeCylinder = { hinge: topHinge, t: t, r: r };
+          } else if (type === "kerucut") {
+            const baseId = "kerucut-base";
+            const baseMat = makeMaterial(getBaseColor(baseId), {
+              transparent: false,
+            });
+            const baseGeom = new THREE.CircleGeometry(r, 64);
+            baseGeom.rotateX(-Math.PI / 2);
+            const baseMesh = new THREE.Mesh(baseGeom, baseMat);
+            baseMesh.add(
+              new THREE.LineSegments(new THREE.EdgesGeometry(baseGeom), edgeMat),
+            );
+            registerFace(baseMesh, baseId);
+            netGroup.add(baseMesh);
+
+            const selimutId = "kerucut-selimut";
+            const selimutMat = makeMaterial(getSideColor(selimutId), {
+              transparent: true,
+              opacity: 0.85,
+            });
+            const s = Math.sqrt(r * r + t * t);
+            const thetaMax = (2 * Math.PI * r) / s;
+            const cols = 64,
+              rows = 12;
+            const pos3D = [],
+              pos2D = [];
+            for (let i = 0; i <= cols; i++) {
+              const ur = i / cols;
+              const gamma = (ur - 0.5) * thetaMax;
+              const phi = (ur - 0.5) * 2 * Math.PI;
+              for (let j = 0; j <= rows; j++) {
+                const vr = j / rows;
+                const rho = vr * s;
+                const r_prime = vr * r;
+                pos3D.push(
+                  r_prime * Math.sin(phi),
+                  t - vr * t,
+                  -r_prime * Math.cos(phi),
+                );
+                pos2D.push(
+                  rho * Math.sin(gamma),
+                  0,
+                  -r - s + rho * Math.cos(gamma),
+                );
+              }
+            }
+            const selimutMorph = createMorphGeometry(
+              cols,
+              rows,
+              pos3D,
+              pos2D,
+              selimutMat,
+            );
+            registerFace(selimutMorph.mesh, selimutId);
+            netGroup.add(selimutMorph.mesh);
+            window.activeMorphs.push(selimutMorph);
+          } else if (type === "bola") {
+            const N = 36;
+            const M = 48;
+            const deltaPhi = (2 * Math.PI) / N;
+            const overlap = 1.006;
+            const maxW = (2 * Math.PI * r) / N;
+
+            for (let k = 0; k < N; k++) {
+              const phi_c = k * deltaPhi;
+              const cos_p = Math.cos(phi_c);
+              const sin_p = Math.sin(phi_c);
+              const cols = 4;
+              const rows = M;
+
+              const vertexCount = (cols + 1) * (rows + 1);
+              const positions = new Float32Array(vertexCount * 3);
+              const uvs = new Float32Array(vertexCount * 2);
+              const indices = [];
+
+              for (let i = 0; i < cols; i++) {
+                for (let j = 0; j < rows; j++) {
+                  const a = i * (rows + 1) + j;
+                  const b = i * (rows + 1) + j + 1;
+                  const c = (i + 1) * (rows + 1) + j;
+                  const d = (i + 1) * (rows + 1) + j + 1;
+                  indices.push(a, b, d);
+                  indices.push(a, d, c);
+                }
+              }
+              for (let i = 0; i <= cols; i++) {
+                for (let j = 0; j <= rows; j++) {
+                  const idx = i * (rows + 1) + j;
+                  uvs[idx * 2] = i / cols;
+                  uvs[idx * 2 + 1] = j / rows;
+                }
+              }
+
+              const geom = new THREE.BufferGeometry();
+              geom.setIndex(indices);
+              geom.setAttribute(
+                "position",
+                new THREE.BufferAttribute(positions, 3),
+              );
+              geom.setAttribute("uv", new THREE.BufferAttribute(uvs, 2));
+
+              const luneId = "bola-lune-" + k;
+              const luneMat = makeMaterial(getSideColor(luneId), {
+                transparent: false,
+                opacity: 1.0,
+                roughness: 0.32,
+                metalness: 0.05,
+              });
+              const mesh = new THREE.Mesh(geom, luneMat);
+              mesh.userData.isMorph = true;
+              mesh.userData.cols = cols;
+              mesh.userData.rows = rows;
+              registerFace(mesh, luneId);
+              netGroup.add(mesh);
+
+              const params = [];
+              for (let i = 0; i <= cols; i++) {
+                const ur = i / cols;
+                for (let j = 0; j <= rows; j++) {
+                  const vr = j / rows;
+                  const theta = vr * Math.PI;
+                  params.push({ uLocal: ur - 0.5, theta });
+                }
+              }
+
+              const morph = {
+                mesh,
+                update: function (u) {
+                  const alpha = 1 - u;
+                  const arr = mesh.geometry.attributes.position.array;
+
+                  for (let idx = 0; idx < params.length; idx++) {
+                    const { uLocal, theta } = params[idx];
+
+                    const W = maxW * Math.sin(theta) * overlap;
+                    const xLocal = uLocal * W;
+
+                    const flatY = 0.001;
+                    const flatZ = theta * r;
+
+                    const sphereY = r * (1 - Math.cos(theta));
+                    const sphereZ = r * Math.sin(theta);
+
+                    const y = flatY * (1 - alpha) + sphereY * alpha;
+                    const z = flatZ * (1 - alpha) + sphereZ * alpha;
+
+                    arr[idx * 3] = xLocal * cos_p + z * sin_p;
+                    arr[idx * 3 + 1] = y;
+                    arr[idx * 3 + 2] = -xLocal * sin_p + z * cos_p;
+                  }
+
+                  mesh.geometry.attributes.position.needsUpdate = true;
+                  mesh.geometry.computeVertexNormals();
+                },
+              };
+              window.activeMorphs.push(morph);
+            }
+          }
+        } else {
+          let baseVertices = [];
+          if (n === 4) {
+            baseVertices.push(new THREE.Vector3(p / 2, 0, l / 2));
+            baseVertices.push(new THREE.Vector3(p / 2, 0, -l / 2));
+            baseVertices.push(new THREE.Vector3(-p / 2, 0, -l / 2));
+            baseVertices.push(new THREE.Vector3(-p / 2, 0, l / 2));
+          } else {
+            const radius = p / 2;
+            for (let i = 0; i < n; i++) {
+              const angle = (i * 2 * Math.PI) / n;
+              baseVertices.push(
+                new THREE.Vector3(
+                  radius * Math.cos(angle),
+                  0,
+                  -radius * Math.sin(angle),
+                ),
+              );
+            }
+          }
+
+          const baseId = type + "-base";
+          const baseMat = makeMaterial(getBaseColor(baseId), {
+            transparent: false,
+          });
+          const baseShape = new THREE.Shape();
+          baseVertices.forEach((v, i) => {
+            if (i === 0) baseShape.moveTo(v.x, v.z);
+            else baseShape.lineTo(v.x, v.z);
+          });
+          const baseGeom = new THREE.ShapeGeometry(baseShape);
+          baseGeom.rotateX(Math.PI / 2);
+          const baseMesh = new THREE.Mesh(baseGeom, baseMat);
+          baseMesh.add(
+            new THREE.LineSegments(new THREE.EdgesGeometry(baseGeom), edgeMat),
+          );
+          registerFace(baseMesh, baseId);
+          netGroup.add(baseMesh);
+
+          for (let i = 0; i < n; i++) {
+            const vA = baseVertices[i];
+            const vB = baseVertices[(i + 1) % n];
+
+            const E = new THREE.Vector3().subVectors(vB, vA);
+            const W = E.length();
+            const M = new THREE.Vector3().addVectors(vA, vB).multiplyScalar(0.5);
+
+            const xAxis = E.clone().normalize();
+            const yAxis = new THREE.Vector3(0, 1, 0);
+            const zAxis = new THREE.Vector3()
+              .crossVectors(xAxis, yAxis)
+              .normalize();
+
+            const basisMatrix = new THREE.Matrix4().makeBasis(
+              xAxis,
+              yAxis,
+              zAxis,
+            );
+
+            const sideHinge = new THREE.Group();
+            sideHinge.position.copy(M);
+            const baseQuat = new THREE.Quaternion().setFromRotationMatrix(
+              basisMatrix,
+            );
+            sideHinge.quaternion.copy(baseQuat);
+
+            const sideId = type + "-side-" + i;
+
+            if (isPrisma) {
+              const sideMat = makeMaterial(getSideColor(sideId), {
+                transparent: true,
+                opacity: 0.88,
+              });
+              const sideGeom = new THREE.PlaneGeometry(W, t);
+              sideGeom.translate(0, t / 2, 0);
+              const sideMesh = new THREE.Mesh(sideGeom, sideMat);
+              sideMesh.add(
+                new THREE.LineSegments(
+                  new THREE.EdgesGeometry(sideGeom),
+                  edgeMat,
+                ),
+              );
+              registerFace(sideMesh, sideId);
+              sideHinge.add(sideMesh);
+
+              sideHinge.userData = {
+                closedAngle: 0,
+                openAngle: Math.PI / 2,
+                baseQuat: baseQuat,
+              };
+              window.activeHinges.push(sideHinge);
+
+              if (i === 0) {
+                const topId = type + "-top";
+                const topMat = makeMaterial(getBaseColor(topId), {
+                  transparent: false,
+                });
+                const topHinge = new THREE.Group();
+                topHinge.position.set(0, t, 0);
+
+                const topShape = new THREE.Shape();
+                baseVertices.forEach((v, idx) => {
+                  const vRel = new THREE.Vector3().subVectors(v, M);
+                  const xLoc = vRel.dot(xAxis);
+                  const zLoc = vRel.dot(zAxis);
+                  if (idx === 0) topShape.moveTo(xLoc, zLoc);
+                  else topShape.lineTo(xLoc, zLoc);
+                });
+
+                const topGeom = new THREE.ShapeGeometry(topShape);
+                topGeom.rotateX(Math.PI / 2);
+                const topMesh = new THREE.Mesh(topGeom, topMat);
+                topMesh.add(
+                  new THREE.LineSegments(
+                    new THREE.EdgesGeometry(topGeom),
+                    edgeMat,
+                  ),
+                );
+                registerFace(topMesh, topId);
+                topHinge.add(topMesh);
+
+                topHinge.userData = { closedAngle: 0, openAngle: Math.PI / 2 };
+                sideHinge.add(topHinge);
+                window.activeHinges.push(topHinge);
+              }
+            } else {
+              const sideMat = makeMaterial(getSideColor(sideId), {
+                transparent: true,
+                opacity: 0.88,
+              });
+              const centerVec = new THREE.Vector3(0, 0, 0).sub(M);
+              const d_ap = -centerVec.dot(zAxis);
+              const slantHeight = Math.sqrt(t * t + d_ap * d_ap);
+
+              const triShape = new THREE.Shape();
+              triShape.moveTo(-W / 2, 0);
+              triShape.lineTo(W / 2, 0);
+              triShape.lineTo(0, slantHeight);
+              triShape.closePath();
+
+              const sideGeom = new THREE.ShapeGeometry(triShape);
+              const sideMesh = new THREE.Mesh(sideGeom, sideMat);
+              sideMesh.add(
+                new THREE.LineSegments(
+                  new THREE.EdgesGeometry(sideGeom),
+                  edgeMat,
+                ),
+              );
+              registerFace(sideMesh, sideId);
+              sideHinge.add(sideMesh);
+
+              const closedAngle = -Math.atan2(d_ap, t);
+              const openAngle = Math.PI / 2;
+
+              sideHinge.userData = {
+                closedAngle: closedAngle,
+                openAngle: openAngle,
+                baseQuat: baseQuat,
+              };
+              window.activeHinges.push(sideHinge);
+            }
+            netGroup.add(sideHinge);
+          }
+        }
+
+        scene.add(netGroup);
+        applyFoldRotation();
+        restoreNumbers();
+      }
+
+      function applyFoldRotation() {
+        const unfoldVal = parseInt(ui.unfold.value);
+        const progress = unfoldVal / 100;
+
+        const foldAxis = new THREE.Vector3(1, 0, 0);
+        window.activeHinges.forEach((hinge) => {
+          const closed = hinge.userData.closedAngle;
+          const open = hinge.userData.openAngle;
+          const angle = THREE.MathUtils.lerp(closed, open, progress);
+
+          if (hinge.userData.baseQuat) {
+            const foldQuat = new THREE.Quaternion().setFromAxisAngle(
+              foldAxis,
+              angle,
+            );
+            hinge.quaternion.copy(hinge.userData.baseQuat).multiply(foldQuat);
+          } else {
+            hinge.rotation.x = angle;
+          }
+        });
+
+        if (window.activeMorphs) {
+          window.activeMorphs.forEach((morph) => {
+            morph.update(progress);
+            const mesh = morph.mesh;
+            if (
+              mesh.userData.attachedNumbers &&
+              mesh.userData.attachedNumbers.length
+            ) {
+              const posArr = mesh.geometry.attributes.position.array;
+              const normArr = mesh.geometry.attributes.normal.array;
+              const off = 0.12;
+              mesh.userData.attachedNumbers.forEach((item) => {
+                const idx = item.gridIdx;
+                item.sprite.position.set(
+                  posArr[idx * 3] + (normArr[idx * 3] || 0) * off,
+                  posArr[idx * 3 + 1] + (normArr[idx * 3 + 1] || 0) * off,
+                  posArr[idx * 3 + 2] + (normArr[idx * 3 + 2] || 0) * off,
+                );
+              });
+            }
+          });
+        }
+
+        if (window.topHingeCylinder) {
+          const { hinge, t, r } = window.topHingeCylinder;
+          hinge.position.set(0, t * (1 - progress), -r - t * progress);
+          hinge.rotation.x = progress * -Math.PI;
+        }
+
+        if (unfoldVal === 0) {
+          ui.statusBadge.innerText = "Mode: 3D Utuh (Tertutup Rapat)";
+          ui.statusBadge.className =
+            "bg-blue-600 text-white px-5 py-2.5 rounded-full shadow-lg text-sm font-black border-2 border-white/20 transition-colors";
+        } else if (unfoldVal === 100) {
+          ui.statusBadge.innerText = "Mode: Jaring-Jaring Datar (2D)";
+          ui.statusBadge.className =
+            "bg-emerald-600 text-white px-5 py-2.5 rounded-full shadow-lg text-sm font-black border-2 border-white/20 transition-colors";
+        } else {
+          ui.statusBadge.innerText = `Proses Melipat (${unfoldVal}%)`;
+          ui.statusBadge.className =
+            "bg-amber-500 text-white px-5 py-2.5 rounded-full shadow-lg text-sm font-black border-2 border-white/20 animate-pulse";
+        }
+      }
+
+      function updatePedagogyCard() {
+        const type = ui.type.value;
+        const n = parseInt(ui.sides.value);
+        const p = parseFloat(ui.panjang.value);
+        const l = parseFloat(ui.lebar.value);
+        const t = parseFloat(ui.tinggi.value);
+
+        ui.lblSides.innerText = n;
+        ui.lblPanjang.innerText = p;
+        ui.lblLebar.innerText = l;
+        ui.lblTinggi.innerText = t;
+
+        let titleStr = "";
+        let subStr = "";
+        let descStr = "";
+        let iconChar = "B";
+        let showBadge = false;
+
+        ui.icon.className =
+          "w-14 h-14 rounded-2xl flex items-center justify-center font-black text-2xl shadow-inner shrink-0 transition-colors duration-300 bg-blue-100 text-blue-600";
+        ui.card.className =
+          "absolute bottom-6 left-4 right-4 md:left-auto md:right-8 md:w-[450px] glass-panel p-6 rounded-2xl shadow-2xl pointer-events-none transition-all duration-300 transform scale-100 ring-2 ring-transparent";
+
+        const namaAlas = {
+          3: "Segitiga",
+          4: "Segi Empat",
+          5: "Segi Lima",
+          6: "Segi Enam",
+          7: "Segi Tujuh",
+          8: "Segi Delapan",
+        };
+
+        if (type === "prisma") {
+          iconChar = "P";
+          if (n === 4) {
+            showBadge = true;
+            if (p === l && l === t) {
+              titleStr = "KUBUS!";
+              subStr = "Bentuk Prisma yang Paling Spesial.";
+              descStr = `Selamat! Anda membuktikan bahwa <b>Kubus adalah Prisma Segi Empat</b>. Karena semua sisinya sama persis (${p}x${p}x${p}), jaring-jaringnya terdiri dari <b>6 persegi identik</b>.`;
+              ui.icon.classList.replace("bg-blue-100", "bg-amber-100");
+              ui.icon.classList.replace("text-blue-600", "text-amber-600");
+              ui.card.classList.add("ring-amber-400");
+              iconChar = "K";
+            } else {
+              titleStr = "BALOK";
+              subStr = "Ternyata Balok itu Prisma Segi Empat!";
+              descStr =
+                "Coba buka jaring-jaringnya. Balok memiliki alas dan tutup berbentuk segi empat yang sejajar. Oleh karena itu, <b>secara matematis Balok masuk keluarga Prisma</b>.";
+              ui.icon.classList.replace("bg-blue-100", "bg-purple-100");
+              ui.icon.classList.replace("text-blue-600", "text-purple-600");
+              ui.card.classList.add("ring-purple-400");
+              iconChar = "B";
+            }
+          } else {
+            titleStr = "Prisma " + namaAlas[n];
+            subStr = "Memiliki Alas dan Tutup Identik";
+            descStr = `Jaring-jaring prisma terdiri dari <b>2 bidang ${namaAlas[n]}</b> (alas & tutup) serta <b>${n} persegi panjang sisi tegak</b>. Coba lipat dan buka!`;
+          }
+        } else if (type === "limas") {
+          iconChar = "L";
+          titleStr = "Limas " + namaAlas[n];
+          subStr = "Bangun Ruang Berpusat pada Puncak";
+          descStr = `Berbeda dengan prisma, limas tidak punya tutup. Jaring-jaring limas berbentuk seperti <b>bunga mekar</b>: 1 alas ${namaAlas[n]} dikelilingi <b>${n} segitiga</b> yang bersatu di titik puncak saat dilipat rapat.`;
+          ui.icon.classList.replace("bg-blue-100", "bg-emerald-100");
+          ui.icon.classList.replace("text-blue-600", "text-emerald-600");
+        } else if (type === "tabung") {
+          iconChar = "T";
+          titleStr = "Tabung (Silinder)";
+          subStr = "Prisma dengan Alas Lingkaran Sempurna";
+          descStr =
+            "Jaring-jaring tabung sangat unik. Saat dibuka, selimutnya membentang menjadi <b>sebuah persegi panjang</b> raksasa, didampingi <b>2 buah lingkaran</b> identik sebagai alas dan tutup.";
+          ui.icon.classList.replace("bg-blue-100", "bg-cyan-100");
+          ui.icon.classList.replace("text-blue-600", "text-cyan-600");
+        } else if (type === "kerucut") {
+          iconChar = "K";
+          titleStr = "Kerucut";
+          subStr = "Limas dengan Alas Lingkaran";
+          descStr =
+            "Seperti limas, kerucut memiliki satu titik puncak. Jaring-jaringnya terdiri dari <b>1 lingkaran alas</b> dan sebuah <b>juring lingkaran</b> (potongan pizza) yang melingkar membentuk selimut kerucut.";
+          ui.icon.classList.replace("bg-blue-100", "bg-pink-100");
+          ui.icon.classList.replace("text-blue-600", "text-pink-600");
+        } else if (type === "bola") {
+          iconChar = "O";
+          titleStr = "Bola";
+          subStr = "Bangun Ruang Sisi Lengkung Sempurna";
+          descStr =
+            "Secara matematis, bola tidak bisa dibentangkan menjadi bidang 2D tanpa distorsi. Jaring-jaring ini adalah proyeksi <b>'Orange Peel' (Kulit Jeruk)</b> yang melengkung mulus saat dilipat!";
+          ui.icon.classList.replace("bg-blue-100", "bg-orange-100");
+          ui.icon.classList.replace("text-blue-600", "text-orange-600");
+        }
+
+        ui.title.innerText = titleStr;
+        ui.sub.innerHTML = subStr;
+        ui.desc.innerHTML = descStr;
+        ui.icon.innerText = iconChar;
+        ui.badge.style.display = showBadge ? "inline-block" : "none";
+      }
+
+      function toggleAnimation() {
+        if (isAnimating) stopAnimation();
+        else startAnimation();
+      }
+
+      function startAnimation() {
+        isAnimating = true;
+        ui.animIcon.innerText = "⏸";
+        ui.animText.innerText = "Hentikan Animasi";
+        ui.btnAnimate.classList.replace("bg-blue-600", "bg-red-500");
+        ui.btnAnimate.classList.replace("hover:bg-blue-700", "hover:bg-red-600");
+        ui.btnAnimate.classList.replace(
+          "border-blue-800/20",
+          "border-red-800/20",
+        );
+
+        let direction = 1;
+        animInterval = setInterval(() => {
+          let currentVal = parseInt(ui.unfold.value);
+          if (currentVal >= 100) direction = -1;
+          if (currentVal <= 0) direction = 1;
+
+          ui.unfold.value = currentVal + direction * 2;
+          applyFoldRotation();
+        }, 30);
+      }
+
+      function stopAnimation() {
+        isAnimating = false;
+        ui.animIcon.innerText = "▶";
+        ui.animText.innerText = "Putar Animasi Otomatis";
+        ui.btnAnimate.classList.replace("bg-red-500", "bg-blue-600");
+        ui.btnAnimate.classList.replace("hover:bg-red-600", "hover:bg-blue-700");
+        ui.btnAnimate.classList.replace(
+          "border-red-800/20",
+          "border-blue-800/20",
+        );
+        if (animInterval) clearInterval(animInterval);
+      }
+
+      function onWindowResize() {
+        const container = ui.canvasContainer;
+        const w = container.clientWidth;
+        const h = container.clientHeight;
+        if (w > 0 && h > 0) {
+          camera.aspect = w / h;
+          camera.updateProjectionMatrix();
+          renderer.setSize(w, h);
+        }
+      }
+
+      function animate() {
+        requestAnimationFrame(animate);
+        controls.update();
+        renderer.render(scene, camera);
+      }
+
+      window.addEventListener("load", () => {
+        requestAnimationFrame(() => requestAnimationFrame(init));
+      });
+    </script>
+  </body>
+</html>
